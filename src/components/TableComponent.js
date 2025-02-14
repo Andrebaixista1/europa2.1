@@ -165,7 +165,7 @@ const TableComponent = () => {
           data_hora_registro: formatDateTime(new Date()),
           nome_arquivo: currentRow.lote
         };
-        await fetch("http://localhost:3005/api/insert", {
+        await fetch("http://45.179.91.180:5000/api/insert", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(processedData)
@@ -206,13 +206,13 @@ const TableComponent = () => {
   const handleDeleteRow = async id => {
     const row = rows.find(r => r.id === id);
     if(!row) return;
-    await fetch(`http://localhost:3005/api/delete?nome_arquivo=${row.lote}`, { method: "DELETE" });
+    await fetch(`http://45.179.91.180:5000/api/delete?nome_arquivo=${row.lote}`, { method: "DELETE" });
     setRows(prev => prev.filter(row => row.id !== id));
   };
   const handleDownload = async id => {
     const row = rows.find(r => r.id === id);
     if(!row || row.lote === "Sem arquivo") return;
-    const response = await fetch(`http://localhost:3005/api/download?nome_arquivo=${row.lote}`);
+    const response = await fetch(`http://45.179.91.180:5000/api/download?nome_arquivo=${row.lote}`);
     const result = await response.json();
     if(result.success && result.data && result.data.length > 0){
       const excludeKeys = ["id", "ip_origem", "data_hora_registro", "nome_arquivo"];
@@ -256,7 +256,7 @@ const TableComponent = () => {
   };
   return (
     <div className="container mt-4">
-      <h1>Projeto React - Higienização</h1>
+      <h1>Vieira in100 v2.1 - Higienização</h1>
       <button className="btn btn-primary mb-3" onClick={addRow}>+ Adicionar</button>
       <Table bordered striped responsive>
         <thead>

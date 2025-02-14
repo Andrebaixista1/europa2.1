@@ -12,10 +12,10 @@ const pool = mysql.createPool({
   port: 3306,
   user: 'andrefelipe',
   password: '899605aA@',
-  database: 'seu_banco_de_dados' // substitua pelo nome real do seu banco
+  database: 'vieira_online'
 });
 
-// Esse endpoint usa "ON DUPLICATE KEY UPDATE" para atualizar registros caso exista o mesmo numero_documento e numero_beneficio
+// Inserção com atualização se já existir o mesmo CPF e NB (supondo índice único em numero_documento e numero_beneficio)
 app.post('/api/insert', (req, res) => {
   const data = req.body;
   const query = `
@@ -146,4 +146,4 @@ app.get('/api/download', (req, res) => {
   });
 });
 
-app.listen(3001, () => console.log("Server running on port 3001"));
+app.listen(3005, () => console.log("Server running on port 3005"));
