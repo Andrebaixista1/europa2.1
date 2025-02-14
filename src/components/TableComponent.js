@@ -187,7 +187,7 @@ const TableComponent = () => {
           data_hora_registro: formatDateTime(new Date()),
           nome_arquivo: currentRow.lote
         };
-        await fetch("https://45.179.91.180:5000/api/insert", {
+        await fetch("https://api-js-in100.vercel.app/api/insert", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(processedData)
@@ -233,7 +233,7 @@ const TableComponent = () => {
     if (window.confirm("Tem certeza que deseja excluir este arquivo? Esta ação não pode ser desfeita.")) {
       const row = rows.find(r => r.id === id);
       if (!row) return;
-      await fetch(`https://45.179.91.180:5000/api/delete?nome_arquivo=${row.lote}`, { method: "DELETE" });
+      await fetch(`https://api-js-in100.vercel.app/api/delete?nome_arquivo=${row.lote}`, { method: "DELETE" });
       setRows(prev => prev.filter(row => row.id !== id));
       toast.success("Arquivo excluído com sucesso do banco de dados!");
     }
@@ -242,7 +242,7 @@ const TableComponent = () => {
   const handleDownload = async id => {
     const row = rows.find(r => r.id === id);
     if (!row || row.lote === "Sem arquivo") return;
-    const response = await fetch(`https://45.179.91.180:5000/api/download?nome_arquivo=${row.lote}`);
+    const response = await fetch(`https://api-js-in100.vercel.app/api/download?nome_arquivo=${row.lote}`);
     const result = await response.json();
     if (result.success && result.data && result.data.length > 0) {
       const excludeKeys = ["id", "ip_origem", "data_hora_registro", "nome_arquivo"];
