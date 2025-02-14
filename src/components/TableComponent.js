@@ -1,4 +1,3 @@
-// src/components/TableComponent.js
 import React, { useState, useRef, useEffect } from "react";
 import { Table } from "react-bootstrap";
 import TableRow from "./TableRow";
@@ -10,17 +9,36 @@ const TableComponent = () => {
   const [tokenTimestamp, setTokenTimestamp] = useState(0);
   const [clientIP, setClientIP] = useState("");
   const rowsRef = useRef(rows);
+
   useEffect(() => { rowsRef.current = rows; }, [rows]);
+
+  // Confirm before unload (reloading or closing the page)
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      const message = "Você perderá todos os dados não salvos! Tem certeza que quer sair?";
+      event.returnValue = message;
+      return message;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [rows]);
+
   useEffect(() => {
     fetch("https://api.ipify.org?format=json")
       .then(res => res.json())
       .then(data => setClientIP(data.ip))
       .catch(() => setClientIP("127.0.0.1"));
   }, []);
+
   const formatDateTime = (date) => {
     const pad = n => n.toString().padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   };
+
   const addRow = () => {
     if (rows.length < 10) {
       const newRow = {
@@ -39,6 +57,7 @@ const TableComponent = () => {
       toast.error("Limite de 10 linhas atingido! Não é possível adicionar mais.");
     }
   };
+
   const handleFileUpload = (event, id) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -71,6 +90,7 @@ const TableComponent = () => {
     };
     reader.readAsText(file);
   };
+
   const getToken = async () => {
     const TEN_HOURS = 10 * 3600000;
     const now = Date.now();
@@ -96,21 +116,23 @@ const TableComponent = () => {
       return "";
     }
   };
+
   const processCsvData = async (rowId) => {
     setRows(prev => prev.map(row => row.id === rowId ? { ...row, processing: true, status: "carregando" } : row));
     let token = await getToken();
     const processLine = async () => {
       setRows(prev => prev.map(row => {
-        if(row.id === rowId){
-          if(row.status !== "carregando" || row.currentIndex >= row.total){
+        if (row.id === rowId) {
+          if (row.status !== "carregando" || row.currentIndex >= row.total) {
             return { ...row, processing: false, status: "idle" };
           }
         }
         return row;
       }));
+
       const currentRow = rowsRef.current.find(r => r.id === rowId);
-      if(!currentRow || currentRow.status !== "carregando") return;
-      if(currentRow.currentIndex >= currentRow.total){
+      if (!currentRow || currentRow.status !== "carregando") return;
+      if (currentRow.currentIndex >= currentRow.total) {
         toast.success(`Processamento do arquivo ${currentRow.lote} concluído!`);
         setRows(prev => prev.map(row => row.id === rowId ? { ...row, processing: false, status: "idle" } : row));
         return;
@@ -171,7 +193,7 @@ const TableComponent = () => {
           body: JSON.stringify(processedData)
         });
         setRows(prev => prev.map(row => {
-          if(row.id === rowId){
+          if (row.id === rowId) {
             return {
               ...row,
               higienizados: row.higienizados + (isHigienizado ? 1 : 0),
@@ -181,13 +203,13 @@ const TableComponent = () => {
           }
           return row;
         }));
-      } catch(error){
-        setRows(prev => prev.map(row => 
+      } catch (error) {
+        setRows(prev => prev.map(row =>
           row.id === rowId ? { ...row, semRespostaAPI: row.semRespostaAPI + 1, currentIndex: row.currentIndex + 1 } : row
         ));
       }
       const updatedRow = rowsRef.current.find(r => r.id === rowId);
-      if(updatedRow && updatedRow.status === "carregando" && updatedRow.currentIndex < updatedRow.total){
+      if (updatedRow && updatedRow.status === "carregando" && updatedRow.currentIndex < updatedRow.total) {
         setTimeout(() => { processLine(); }, 3000);
       } else {
         setRows(prev => prev.map(row => row.id === rowId ? { ...row, processing: false, status: "idle" } : row));
@@ -195,26 +217,34 @@ const TableComponent = () => {
     };
     processLine();
   };
+
   const handleGenerateToken = id => { processCsvData(id); };
+
   const handlePause = id => {
     setRows(prev => prev.map(row => row.id === id ? { ...row, status: "pausado", processing: false } : row));
   };
+
   const handleResume = id => {
     setRows(prev => prev.map(row => row.id === id ? { ...row, status: "carregando", processing: true } : row));
     processCsvData(id);
   };
-  const handleDeleteRow = async id => {
-    const row = rows.find(r => r.id === id);
-    if(!row) return;
-    await fetch(`http://45.179.91.180:5000/api/delete?nome_arquivo=${row.lote}`, { method: "DELETE" });
-    setRows(prev => prev.filter(row => row.id !== id));
+
+  const handleDeleteRow = async (id) => {
+    if (window.confirm("Tem certeza que deseja excluir este arquivo? Esta ação não pode ser desfeita.")) {
+      const row = rows.find(r => r.id === id);
+      if (!row) return;
+      await fetch(`http://45.179.91.180:5000/api/delete?nome_arquivo=${row.lote}`, { method: "DELETE" });
+      setRows(prev => prev.filter(row => row.id !== id));
+      toast.success("Arquivo excluído com sucesso do banco de dados!");
+    }
   };
+
   const handleDownload = async id => {
     const row = rows.find(r => r.id === id);
-    if(!row || row.lote === "Sem arquivo") return;
+    if (!row || row.lote === "Sem arquivo") return;
     const response = await fetch(`http://45.179.91.180:5000/api/download?nome_arquivo=${row.lote}`);
     const result = await response.json();
-    if(result.success && result.data && result.data.length > 0){
+    if (result.success && result.data && result.data.length > 0) {
       const excludeKeys = ["id", "ip_origem", "data_hora_registro", "nome_arquivo"];
       const numericKeys = [
         "limite_cartao_beneficio",
@@ -232,7 +262,7 @@ const TableComponent = () => {
         const csvRows = data.map(item =>
           keys.map(key => {
             let value = item[key] !== null && item[key] !== undefined ? item[key].toString() : "";
-            if(numericKeys.includes(key)){
+            if (numericKeys.includes(key)) {
               value = value.replace(/\./g, ",");
             }
             return `"${value.replace(/"/g, '""')}"`;
@@ -254,6 +284,12 @@ const TableComponent = () => {
       toast.error("Erro ao realizar download ou nenhum dado encontrado.");
     }
   };
+
+  // Calculando o total
+  const calculateTotal = () => {
+    return rows.reduce((acc, row) => acc + row.total, 0);
+  };
+
   return (
     <div className="container mt-4">
       <h1>Vieira in100 v2.1 - Higienização</h1>
@@ -282,6 +318,12 @@ const TableComponent = () => {
               handleDownload={handleDownload}
             />
           ))}
+          {/* Linha total */}
+          <tr>
+            <td colSpan="2">Total:</td>
+            <td>{calculateTotal()}</td>
+            <td colSpan="3"></td>
+          </tr>
         </tbody>
       </Table>
     </div>
