@@ -12,30 +12,25 @@ const TableComponent = () => {
   const [clientIP, setClientIP] = useState("");
   const rowsRef = useRef(rows);
 
-  // Estado para status da API
   const [apiStatus, setApiStatus] = useState("Carregando...");
-  // Exibe o overlay automaticamente ao carregar a página
   const [showOverlay, setShowOverlay] = useState(true);
 
   useEffect(() => {
     rowsRef.current = rows;
   }, [rows]);
 
-  // Confirma antes de sair (recarregar/fechar a página)
   useEffect(() => {
     const handleBeforeUnload = (event) => {
       const message = "Você perderá todos os dados não salvos! Tem certeza que quer sair?";
       event.returnValue = message;
       return message;
     };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [rows]);
 
-  // Captura IP do cliente
   useEffect(() => {
     fetch("https://api.ipify.org?format=json")
       .then((res) => res.json())
@@ -43,7 +38,6 @@ const TableComponent = () => {
       .catch(() => setClientIP("127.0.0.1"));
   }, []);
 
-  // Verifica status da API a cada 30s
   useEffect(() => {
     const checkAPIStatus = async () => {
       try {
@@ -73,21 +67,20 @@ const TableComponent = () => {
         } else {
           setApiStatus("API Instavel");
         }
-      } catch (error) {
+      } catch {
         setApiStatus("API Fora");
       }
     };
 
-    checkAPIStatus(); // executa imediatamente
+    checkAPIStatus();
     const intervalId = setInterval(checkAPIStatus, 30000);
     return () => clearInterval(intervalId);
   }, []);
 
-  // Mapeia status -> cor
   const getApiColor = (status) => {
     if (status === "API OK") return "green";
     if (status === "API Instavel") return "goldenrod";
-    return "red"; // Para "API Fora" ou erro
+    return "red";
   };
 
   const formatDateTime = (date) => {
@@ -154,7 +147,6 @@ const TableComponent = () => {
     reader.readAsText(file);
   };
 
-  // Função para obter token (reaproveitando se já existir)
   const getToken = async () => {
     const TEN_HOURS = 10 * 3600000;
     const now = Date.now();
@@ -177,7 +169,7 @@ const TableComponent = () => {
       setGlobalToken(data.token);
       setTokenTimestamp(Date.now());
       return data.token;
-    } catch (error) {
+    } catch {
       toast.error("Erro ao gerar token da API");
       return "";
     }
@@ -212,7 +204,7 @@ const TableComponent = () => {
 
       const currentData = currentRow.csvData[currentRow.currentIndex];
       try {
-        const response = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
+        const responseBalance = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -224,50 +216,60 @@ const TableComponent = () => {
             attemps: 3
           })
         });
-        const data = await response.json();
+        const dataBalance = await responseBalance.json();
 
-        const isHigienizado = data.benefitNumber && data.name && data.documentNumber;
+        const isHigienizado = dataBalance.benefitNumber && dataBalance.name && dataBalance.documentNumber;
         const processedData = {
-          id: data.id,
-          numero_beneficio: data.benefitNumber,
-          numero_documento: data.documentNumber,
-          nome: data.name,
-          estado: data.state,
-          pensao: data.alimony,
-          data_nascimento: data.birthDate,
-          tipo_bloqueio: data.blockType,
-          data_concessao: data.grantDate,
-          tipo_credito: data.creditType,
-          limite_cartao_beneficio: data.benefitCardLimit,
-          saldo_cartao_beneficio: data.benefitCardBalance,
-          status_beneficio: data.benefitStatus,
-          data_fim_beneficio: data.benefitEndDate,
-          limite_cartao_consignado: data.consignedCardLimit,
-          saldo_cartao_consignado: data.consignedCardBalance,
-          saldo_credito_consignado: data.consignedCreditBalance,
-          saldo_total_maximo: data.maxTotalBalance,
-          saldo_total_utilizado: data.usedTotalBalance,
-          saldo_total_disponivel: data.availableTotalBalance,
-          data_consulta: data.queryDate,
-          data_retorno_consulta: data.queryReturnDate,
-          tempo_retorno_consulta: data.queryReturnTime,
-          nome_representante_legal: data.legalRepresentativeName,
-          banco_desembolso: data.disbursementBankAccount ? data.disbursementBankAccount.bank : null,
-          agencia_desembolso: data.disbursementBankAccount ? data.disbursementBankAccount.branch : null,
-          numero_conta_desembolso: data.disbursementBankAccount ? data.disbursementBankAccount.number : null,
-          digito_conta_desembolso: data.disbursementBankAccount ? data.disbursementBankAccount.digit : null,
-          numero_portabilidades: data.numberOfPortabilities,
+          id: dataBalance.id,
+          numero_beneficio: dataBalance.benefitNumber,
+          numero_documento: dataBalance.documentNumber,
+          nome: dataBalance.name,
+          estado: dataBalance.state,
+          pensao: dataBalance.alimony,
+          data_nascimento: dataBalance.birthDate,
+          tipo_bloqueio: dataBalance.blockType,
+          data_concessao: dataBalance.grantDate,
+          tipo_credito: dataBalance.creditType,
+          limite_cartao_beneficio: dataBalance.benefitCardLimit,
+          saldo_cartao_beneficio: dataBalance.benefitCardBalance,
+          status_beneficio: dataBalance.benefitStatus,
+          data_fim_beneficio: dataBalance.benefitEndDate,
+          limite_cartao_consignado: dataBalance.consignedCardLimit,
+          saldo_cartao_consignado: dataBalance.consignedCardBalance,
+          saldo_credito_consignado: dataBalance.consignedCreditBalance,
+          saldo_total_maximo: dataBalance.maxTotalBalance,
+          saldo_total_utilizado: dataBalance.usedTotalBalance,
+          saldo_total_disponivel: dataBalance.availableTotalBalance,
+          data_consulta: dataBalance.queryDate,
+          data_retorno_consulta: dataBalance.queryReturnDate,
+          tempo_retorno_consulta: dataBalance.queryReturnTime,
+          nome_representante_legal: dataBalance.legalRepresentativeName,
+          banco_desembolso: dataBalance.disbursementBankAccount ? dataBalance.disbursementBankAccount.bank : null,
+          agencia_desembolso: dataBalance.disbursementBankAccount ? dataBalance.disbursementBankAccount.branch : null,
+          numero_conta_desembolso: dataBalance.disbursementBankAccount ? dataBalance.disbursementBankAccount.number : null,
+          digito_conta_desembolso: dataBalance.disbursementBankAccount ? dataBalance.disbursementBankAccount.digit : null,
+          numero_portabilidades: dataBalance.numberOfPortabilities,
           ip_origem: clientIP,
           data_hora_registro: formatDateTime(new Date()),
           nome_arquivo: currentRow.lote
         };
 
-        // Envia para o backend
-        await fetch("https://api-js-in100.vercel.app/api/insert", {
+        const responseInsert = await fetch("https://api-js-in100.vercel.app/api/insert", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(processedData)
         });
+
+        if (!responseInsert.ok) {
+          if (responseInsert.status === 403) {
+            toast.error(`IP Externo Bloqueado\nPasse o IP<strong>${clientIP}</strong> para o seu gerente Expande ou diretamente para o planejamento`);
+            return;
+          } else {
+            toast.error("Erro ao inserir dados");
+            return;
+          }
+        }
+        
 
         setRows((prev) =>
           prev.map((row) => {
@@ -282,7 +284,7 @@ const TableComponent = () => {
             return row;
           })
         );
-      } catch (error) {
+      } catch {
         setRows((prev) =>
           prev.map((row) =>
             row.id === rowId
@@ -389,8 +391,6 @@ const TableComponent = () => {
   return (
     <div className="container mt-4">
       <h1>Vieira in100 v2.1 - Higienização</h1>
-
-      {/* Linha com botão e status da API */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <button className="btn btn-primary" onClick={addRow}>
           + Adicionar
@@ -410,7 +410,6 @@ const TableComponent = () => {
         </div>
       </div>
 
-      {/* Tabela principal */}
       <Table bordered striped responsive>
         <thead>
           <tr>
@@ -447,9 +446,7 @@ const TableComponent = () => {
         </tbody>
       </Table>
 
-      {/* Overlay de changelog (aparece automaticamente ao carregar a página) */}
       {showOverlay && <ChangelogOverlay onClose={() => setShowOverlay(false)} />}
-
       <Footer />
     </div>
   );
