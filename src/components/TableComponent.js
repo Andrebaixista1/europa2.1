@@ -262,7 +262,7 @@ const TableComponent = () => {
 
         if (!responseInsert.ok) {
           if (responseInsert.status === 403) {
-            toast.error(`IP Externo Bloqueado\nPasse o IP<strong>${clientIP}</strong> para o seu gerente Expande ou diretamente para o planejamento`);
+            toast.error(`IP Externo Bloqueado\nPasse o IP${clientIP} para o seu gerente Expande ou diretamente para o planejamento`);
             return;
           } else {
             toast.error("Erro ao inserir dados");
