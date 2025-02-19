@@ -11,8 +11,8 @@ const TableComponent = () => {
   const [tokenTimestamp, setTokenTimestamp] = useState(0);
   const [clientIP, setClientIP] = useState("");
   const rowsRef = useRef(rows);
-
-  const [apiStatus, setApiStatus] = useState("Carregando...");
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
   const [showOverlay, setShowOverlay] = useState(true);
 
   useEffect(() => {
@@ -38,51 +38,6 @@ const TableComponent = () => {
       .catch(() => setClientIP("127.0.0.1"));
   }, []);
 
-  useEffect(() => {
-    const checkAPIStatus = async () => {
-      try {
-        const token = await getToken();
-        const response = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            identity: "34327258172",
-            benefitNumber: "1595992488",
-            attemps: 3
-          })
-        });
-
-        if (response.status === 200) {
-          const data = await response.json();
-          if (data.name) {
-            setApiStatus("API OK");
-          } else {
-            setApiStatus("API Fora");
-          }
-        } else if (response.status === 500) {
-          setApiStatus("API Fora");
-        } else {
-          setApiStatus("API Instavel");
-        }
-      } catch {
-        setApiStatus("API Fora");
-      }
-    };
-
-    checkAPIStatus();
-    const intervalId = setInterval(checkAPIStatus, 30000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  const getApiColor = (status) => {
-    if (status === "API OK") return "green";
-    if (status === "API Instavel") return "goldenrod";
-    return "red";
-  };
-
   const formatDateTime = (date) => {
     const pad = (n) => n.toString().padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(
@@ -106,6 +61,32 @@ const TableComponent = () => {
       setRows((prev) => [...prev, newRow]);
     } else {
       toast.error("Limite de 10 linhas atingido! Não é possível adicionar mais.");
+    }
+  };
+
+  const handleAdicionar = async () => {
+    try {
+      const response = await fetch("https://api.ajin.io/v3/auth/sign-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessId: login,
+          password: password,
+          authKey: "",
+          type: "",
+          stayConnected: false
+        })
+      });
+      const data = await response.json();
+      if (data.token) {
+        setGlobalToken(data.token);
+        setTokenTimestamp(Date.now());
+        addRow();
+      } else {
+        toast.error("Erro ao gerar token da API");
+      }
+    } catch {
+      toast.error("Erro ao gerar token da API");
     }
   };
 
@@ -158,8 +139,8 @@ const TableComponent = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accessId: "kamorim.vieiracred@qualiconsig.com.br",
-          password: "Nova@25*",
+          accessId: login,
+          password: password,
           authKey: "",
           type: "",
           stayConnected: false
@@ -262,14 +243,15 @@ const TableComponent = () => {
 
         if (!responseInsert.ok) {
           if (responseInsert.status === 403) {
-            toast.error(`IP Externo Bloqueado\nPasse o IP${clientIP} para o seu gerente Expande ou diretamente para o planejamento`);
+            toast.error(
+              `IP Externo Bloqueado\nPasse o IP ${clientIP} para o seu gerente Expande ou diretamente para o planejamento`
+            );
             return;
           } else {
             toast.error("Erro ao inserir dados");
             return;
           }
         }
-        
 
         setRows((prev) =>
           prev.map((row) => {
@@ -391,23 +373,26 @@ const TableComponent = () => {
   return (
     <div className="container mt-4">
       <h1>Vieira in100 v2.1 - Higienização</h1>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <button className="btn btn-primary" onClick={addRow}>
+      <div className="d-flex align-items-center mb-3">
+        <input
+          type="text"
+          placeholder="Login"
+          value={login}
+          onChange={(e) => setLogin(e.target.value)}
+          className="form-control me-2"
+          style={{ maxWidth: "200px" }}
+        />
+        <input
+          type="password"
+          placeholder="Senha"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="form-control me-2"
+          style={{ maxWidth: "200px" }}
+        />
+        <button className="btn btn-primary" onClick={handleAdicionar}>
           + Adicionar
         </button>
-        <div className="d-flex align-items-center">
-          <span
-            style={{
-              display: "inline-block",
-              width: "10px",
-              height: "10px",
-              borderRadius: "50%",
-              backgroundColor: getApiColor(apiStatus),
-              marginRight: "8px"
-            }}
-          />
-          <strong>{apiStatus}</strong>
-        </div>
       </div>
 
       <Table bordered striped responsive>
