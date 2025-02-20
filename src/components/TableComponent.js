@@ -1,3 +1,4 @@
+// FRONTEND (TableComponent.jsx)
 import React, { useState, useRef, useEffect } from "react";
 import { Table } from "react-bootstrap";
 import TableRow from "./TableRow";
@@ -10,10 +11,11 @@ const TableComponent = () => {
   const [globalToken, setGlobalToken] = useState("");
   const [tokenTimestamp, setTokenTimestamp] = useState(0);
   const [clientIP, setClientIP] = useState("");
-  const rowsRef = useRef(rows);
+  const rowsRef = useRef([]);
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showOverlay, setShowOverlay] = useState(true);
+  const [limiteMensal, setLimiteMensal] = useState(null);
 
   useEffect(() => {
     rowsRef.current = rows;
@@ -38,11 +40,29 @@ const TableComponent = () => {
       .catch(() => setClientIP("127.0.0.1"));
   }, []);
 
+  const fetchLimiteMensal = async () => {
+    try {
+      const response = await fetch("https://api-js-in100.vercel.app/api/limit");
+      const result = await response.json();
+      if (result.success) {
+        setLimiteMensal(result.limite);
+      } else {
+        setLimiteMensal(0);
+      }
+    } catch {
+      setLimiteMensal(0);
+    }
+  };
+
+  useEffect(() => {
+    fetchLimiteMensal();
+  }, []);
+
   const formatDateTime = (date) => {
     const pad = (n) => n.toString().padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(
-      date.getMinutes()
-    )}:${pad(date.getSeconds())}`;
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
+      date.getHours()
+    )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   };
 
   const addRow = () => {
@@ -58,7 +78,11 @@ const TableComponent = () => {
         processing: false,
         status: "idle"
       };
-      setRows((prev) => [...prev, newRow]);
+      setRows((prev) => {
+        const updated = [...prev, newRow];
+        rowsRef.current = updated;
+        return updated;
+      });
     } else {
       toast.error("Limite de 10 linhas atingido! Não é possível adicionar mais.");
     }
@@ -121,9 +145,13 @@ const TableComponent = () => {
         };
       });
       const lote = file.name.replace(/[ _\-.]/g, "_");
-      setRows((prev) =>
-        prev.map((row) => (row.id === id ? { ...row, lote, total: data.length, csvData: data } : row))
-      );
+      setRows((prev) => {
+        const updated = prev.map((row) =>
+          row.id === id ? { ...row, lote, total: data.length, csvData: data } : row
+        );
+        rowsRef.current = updated;
+        return updated;
+      });
     };
     reader.readAsText(file);
   };
@@ -156,124 +184,173 @@ const TableComponent = () => {
     }
   };
 
-  const processCsvData = async (rowId) => {
-    setRows((prev) => prev.map((row) => (row.id === rowId ? { ...row, processing: true, status: "carregando" } : row)));
-    let token = await getToken();
-
-    const processLine = async () => {
-      setRows((prev) =>
-        prev.map((row) => {
-          if (row.id === rowId) {
-            if (row.status !== "carregando" || row.currentIndex >= row.total) {
-              return { ...row, processing: false, status: "idle" };
-            }
-          }
-          return row;
-        })
-      );
-
-      const currentRow = rowsRef.current.find((r) => r.id === rowId);
-      if (!currentRow || currentRow.status !== "carregando") return;
-
-      if (currentRow.currentIndex >= currentRow.total) {
-        toast.success(`Processamento do arquivo ${currentRow.lote} concluído!`);
-        setRows((prev) =>
-          prev.map((row) => (row.id === rowId ? { ...row, processing: false, status: "idle" } : row))
-        );
-        return;
-      }
-
-      const currentData = currentRow.csvData[currentRow.currentIndex];
+  const fetchBalanceWithRetries = async (cpf, nb, token) => {
+    for (let i = 0; i < 3; i++) {
       try {
-        const responseBalance = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
+        const response = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
-            identity: currentData.cpf,
-            benefitNumber: currentData.nb,
+            identity: cpf,
+            benefitNumber: nb,
             attemps: 3
           })
         });
-        const dataBalance = await responseBalance.json();
-
-        const isHigienizado = dataBalance.benefitNumber && dataBalance.name && dataBalance.documentNumber;
-        const processedData = {
-          id: dataBalance.id,
-          numero_beneficio: dataBalance.benefitNumber,
-          numero_documento: dataBalance.documentNumber,
-          nome: dataBalance.name,
-          estado: dataBalance.state,
-          pensao: dataBalance.alimony,
-          data_nascimento: dataBalance.birthDate,
-          tipo_bloqueio: dataBalance.blockType,
-          data_concessao: dataBalance.grantDate,
-          tipo_credito: dataBalance.creditType,
-          limite_cartao_beneficio: dataBalance.benefitCardLimit,
-          saldo_cartao_beneficio: dataBalance.benefitCardBalance,
-          status_beneficio: dataBalance.benefitStatus,
-          data_fim_beneficio: dataBalance.benefitEndDate,
-          limite_cartao_consignado: dataBalance.consignedCardLimit,
-          saldo_cartao_consignado: dataBalance.consignedCardBalance,
-          saldo_credito_consignado: dataBalance.consignedCreditBalance,
-          saldo_total_maximo: dataBalance.maxTotalBalance,
-          saldo_total_utilizado: dataBalance.usedTotalBalance,
-          saldo_total_disponivel: dataBalance.availableTotalBalance,
-          data_consulta: dataBalance.queryDate,
-          data_retorno_consulta: dataBalance.queryReturnDate,
-          tempo_retorno_consulta: dataBalance.queryReturnTime,
-          nome_representante_legal: dataBalance.legalRepresentativeName,
-          banco_desembolso: dataBalance.disbursementBankAccount ? dataBalance.disbursementBankAccount.bank : null,
-          agencia_desembolso: dataBalance.disbursementBankAccount ? dataBalance.disbursementBankAccount.branch : null,
-          numero_conta_desembolso: dataBalance.disbursementBankAccount ? dataBalance.disbursementBankAccount.number : null,
-          digito_conta_desembolso: dataBalance.disbursementBankAccount ? dataBalance.disbursementBankAccount.digit : null,
-          numero_portabilidades: dataBalance.numberOfPortabilities,
-          ip_origem: clientIP,
-          data_hora_registro: formatDateTime(new Date()),
-          nome_arquivo: currentRow.lote
-        };
-
-        const responseInsert = await fetch("https://api-js-in100.vercel.app/api/insert", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(processedData)
-        });
-
-        if (!responseInsert.ok) {
-          if (responseInsert.status === 403) {
-            toast.error(
-              `IP Externo Bloqueado\nPasse o IP ${clientIP} para o seu gerente Expande ou diretamente para o planejamento`
-            );
-            return;
-          } else {
-            toast.error("Erro ao inserir dados");
-            return;
-          }
+        const data = await response.json();
+        if (data.name) {
+          return data;
         }
+      } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+    return null;
+  };
 
-        setRows((prev) =>
-          prev.map((row) => {
-            if (row.id === rowId) {
-              return {
-                ...row,
-                higienizados: row.higienizados + (isHigienizado ? 1 : 0),
-                semRespostaAPI: row.semRespostaAPI + (isHigienizado ? 0 : 1),
-                currentIndex: row.currentIndex + 1
-              };
+  const processCsvData = async (rowId) => {
+    setRows((prev) => {
+      const updated = prev.map((row) =>
+        row.id === rowId ? { ...row, processing: true, status: "carregando" } : row
+      );
+      rowsRef.current = updated;
+      return updated;
+    });
+    const token = await getToken();
+
+    const processLine = async () => {
+      setRows((prev) => {
+        const updated = prev.map((row) => {
+          if (row.id === rowId) {
+            if (row.status !== "carregando" || row.currentIndex >= row.total) {
+              return { ...row, processing: false, status: "idle" };
             }
-            return row;
-          })
-        );
+          }
+          return row;
+        });
+        rowsRef.current = updated;
+        return updated;
+      });
+
+      const currentRow = rowsRef.current.find((r) => r.id === rowId);
+      if (!currentRow || currentRow.status !== "carregando") return;
+
+      if (currentRow.currentIndex >= currentRow.total) {
+        toast.success(`Processamento do arquivo ${currentRow.lote} concluído!`);
+        setRows((prev) => {
+          const updated = prev.map((row) =>
+            row.id === rowId ? { ...row, processing: false, status: "idle" } : row
+          );
+          rowsRef.current = updated;
+          return updated;
+        });
+        return;
+      }
+
+      const currentData = currentRow.csvData[currentRow.currentIndex];
+      try {
+        const dataBalance = await fetchBalanceWithRetries(currentData.cpf, currentData.nb, token);
+        if (!dataBalance) {
+          setRows((prev) => {
+            const updated = prev.map((row) =>
+              row.id === rowId
+                ? { ...row, semRespostaAPI: row.semRespostaAPI + 1, currentIndex: row.currentIndex + 1 }
+                : row
+            );
+            rowsRef.current = updated;
+            return updated;
+          });
+        } else {
+          const isHigienizado =
+            dataBalance.benefitNumber && dataBalance.name && dataBalance.documentNumber;
+          const processedData = {
+            id: dataBalance.id,
+            numero_beneficio: dataBalance.benefitNumber,
+            numero_documento: dataBalance.documentNumber,
+            nome: dataBalance.name,
+            estado: dataBalance.state,
+            pensao: dataBalance.alimony,
+            data_nascimento: dataBalance.birthDate,
+            tipo_bloqueio: dataBalance.blockType,
+            data_concessao: dataBalance.grantDate,
+            tipo_credito: dataBalance.creditType,
+            limite_cartao_beneficio: dataBalance.benefitCardLimit,
+            saldo_cartao_beneficio: dataBalance.benefitCardBalance,
+            status_beneficio: dataBalance.benefitStatus,
+            data_fim_beneficio: dataBalance.benefitEndDate,
+            limite_cartao_consignado: dataBalance.consignedCardLimit,
+            saldo_cartao_consignado: dataBalance.consignedCardBalance,
+            saldo_credito_consignado: dataBalance.consignedCreditBalance,
+            saldo_total_maximo: dataBalance.maxTotalBalance,
+            saldo_total_utilizado: dataBalance.usedTotalBalance,
+            saldo_total_disponivel: dataBalance.availableTotalBalance,
+            data_consulta: dataBalance.queryDate,
+            data_retorno_consulta: dataBalance.queryReturnDate,
+            tempo_retorno_consulta: dataBalance.queryReturnTime,
+            nome_representante_legal: dataBalance.legalRepresentativeName,
+            banco_desembolso: dataBalance.disbursementBankAccount
+              ? dataBalance.disbursementBankAccount.bank
+              : null,
+            agencia_desembolso: dataBalance.disbursementBankAccount
+              ? dataBalance.disbursementBankAccount.branch
+              : null,
+            numero_conta_desembolso: dataBalance.disbursementBankAccount
+              ? dataBalance.disbursementBankAccount.number
+              : null,
+            digito_conta_desembolso: dataBalance.disbursementBankAccount
+              ? dataBalance.disbursementBankAccount.digit
+              : null,
+            numero_portabilidades: dataBalance.numberOfPortabilities,
+            ip_origem: clientIP,
+            data_hora_registro: formatDateTime(new Date()),
+            nome_arquivo: currentRow.lote
+          };
+
+          const responseInsert = await fetch("https://api-js-in100.vercel.app/api/insert", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(processedData)
+          });
+
+          if (!responseInsert.ok) {
+            if (responseInsert.status === 403) {
+              toast.error(
+                `IP Externo Bloqueado ou Limite de consultas atingido.\nPasse o IP ${clientIP} para o gerente Expande ou diretamente para o planejamento`
+              );
+              return;
+            } else {
+              toast.error("Erro ao inserir dados");
+              return;
+            }
+          }
+
+          setRows((prev) => {
+            const updated = prev.map((row) => {
+              if (row.id === rowId) {
+                return {
+                  ...row,
+                  higienizados: row.higienizados + (isHigienizado ? 1 : 0),
+                  semRespostaAPI: row.semRespostaAPI + (isHigienizado ? 0 : 1),
+                  currentIndex: row.currentIndex + 1
+                };
+              }
+              return row;
+            });
+            rowsRef.current = updated;
+            return updated;
+          });
+        }
       } catch {
-        setRows((prev) =>
-          prev.map((row) =>
+        setRows((prev) => {
+          const updated = prev.map((row) =>
             row.id === rowId
               ? { ...row, semRespostaAPI: row.semRespostaAPI + 1, currentIndex: row.currentIndex + 1 }
               : row
-          )
-        );
+          );
+          rowsRef.current = updated;
+          return updated;
+        });
       }
 
       const updatedRow = rowsRef.current.find((r) => r.id === rowId);
@@ -282,10 +359,17 @@ const TableComponent = () => {
           processLine();
         }, 5000);
       } else {
-        setRows((prev) =>
-          prev.map((row) => (row.id === rowId ? { ...row, processing: false, status: "idle" } : row))
-        );
+        setRows((prev) => {
+          const updated = prev.map((row) =>
+            row.id === rowId ? { ...row, processing: false, status: "idle" } : row
+          );
+          rowsRef.current = updated;
+          return updated;
+        });
       }
+
+      // Faz nova requisição para atualizar o valor do limite em tempo real
+      fetchLimiteMensal();
     };
     processLine();
   };
@@ -295,11 +379,23 @@ const TableComponent = () => {
   };
 
   const handlePause = (id) => {
-    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status: "pausado", processing: false } : row)));
+    setRows((prev) => {
+      const updated = prev.map((row) =>
+        row.id === id ? { ...row, status: "pausado", processing: false } : row
+      );
+      rowsRef.current = updated;
+      return updated;
+    });
   };
 
   const handleResume = (id) => {
-    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, status: "carregando", processing: true } : row)));
+    setRows((prev) => {
+      const updated = prev.map((row) =>
+        row.id === id ? { ...row, status: "carregando", processing: true } : row
+      );
+      rowsRef.current = updated;
+      return updated;
+    });
     processCsvData(id);
   };
 
@@ -308,8 +404,13 @@ const TableComponent = () => {
       const row = rows.find((r) => r.id === id);
       if (!row) return;
       await fetch(`https://api-js-in100.vercel.app/api/delete?nome_arquivo=${row.lote}`, { method: "DELETE" });
-      setRows((prev) => prev.filter((row) => row.id !== id));
+      setRows((prev) => {
+        const updated = prev.filter((row) => row.id !== id);
+        rowsRef.current = updated;
+        return updated;
+      });
       toast.success("Arquivo excluído com sucesso do banco de dados!");
+      fetchLimiteMensal();
     }
   };
 
@@ -390,9 +491,13 @@ const TableComponent = () => {
           className="form-control me-2"
           style={{ maxWidth: "200px" }}
         />
-        <button className="btn btn-primary" onClick={handleAdicionar}>
+        <button className="btn btn-primary me-3" onClick={handleAdicionar}>
           + Adicionar
         </button>
+        <div className="ms-auto">
+          <strong>Limite Mensal: </strong>
+          {limiteMensal !== null ? limiteMensal : "Carregando..."}
+        </div>
       </div>
 
       <Table bordered striped responsive>
@@ -421,7 +526,7 @@ const TableComponent = () => {
           ))}
           <tr>
             <td colSpan="2">Total:</td>
-            <td>{totalRows}</td>
+            <td>{calculateTotal()}</td>
             <td>
               {totalHigienizados}/{totalErros}
             </td>
