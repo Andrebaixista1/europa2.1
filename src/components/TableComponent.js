@@ -6,14 +6,21 @@ import { toast } from "react-toastify";
 import ChangelogOverlay from "./ChangelogOverlay";
 import Footer from "./Footer";
 
+
+const FIXED_LOGIN = process.env.REACT_APP_FIXED_LOGIN;
+const FIXED_PASSWORD = process.env.REACT_APP_FIXED_PASSWORD;
+
+console.log("FIXED_LOGIN =", FIXED_LOGIN);
+console.log("FIXED_PASSWORD =", FIXED_PASSWORD);
+
+
+
 const TableComponent = () => {
   const [rows, setRows] = useState([]);
   const [globalToken, setGlobalToken] = useState("");
   const [tokenTimestamp, setTokenTimestamp] = useState(0);
   const [clientIP, setClientIP] = useState("");
   const rowsRef = useRef([]);
-  const [login, setLogin] = useState("");
-  const [password, setPassword] = useState("");
   const [showOverlay, setShowOverlay] = useState(true);
   const [limiteMensal, setLimiteMensal] = useState(null);
 
@@ -28,9 +35,7 @@ const TableComponent = () => {
       return message;
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [rows]);
 
   useEffect(() => {
@@ -94,8 +99,8 @@ const TableComponent = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accessId: login,
-          password: password,
+          accessId: FIXED_LOGIN,
+          password: FIXED_PASSWORD,
           authKey: "",
           type: "",
           stayConnected: false
@@ -167,8 +172,8 @@ const TableComponent = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accessId: login,
-          password: password,
+          accessId: FIXED_LOGIN,
+          password: FIXED_PASSWORD,
           authKey: "",
           type: "",
           stayConnected: false
@@ -367,8 +372,6 @@ const TableComponent = () => {
           return updated;
         });
       }
-
-      // Faz nova requisição para atualizar o valor do limite em tempo real
       fetchLimiteMensal();
     };
     processLine();
@@ -403,7 +406,9 @@ const TableComponent = () => {
     if (window.confirm("Tem certeza que deseja excluir este arquivo? Esta ação não pode ser desfeita.")) {
       const row = rows.find((r) => r.id === id);
       if (!row) return;
-      await fetch(`https://api-js-in100.vercel.app/api/delete?nome_arquivo=${row.lote}`, { method: "DELETE" });
+      await fetch(`https://api-js-in100.vercel.app/api/delete?nome_arquivo=${row.lote}`, {
+        method: "DELETE"
+      });
       setRows((prev) => {
         const updated = prev.filter((row) => row.id !== id);
         rowsRef.current = updated;
@@ -475,22 +480,6 @@ const TableComponent = () => {
     <div className="container mt-4">
       <h1>Vieira in100 v2.1 - Higienização</h1>
       <div className="d-flex align-items-center mb-3">
-        <input
-          type="text"
-          placeholder="Login"
-          value={login}
-          onChange={(e) => setLogin(e.target.value)}
-          className="form-control me-2"
-          style={{ maxWidth: "200px" }}
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="form-control me-2"
-          style={{ maxWidth: "200px" }}
-        />
         <button className="btn btn-primary me-3" onClick={handleAdicionar}>
           + Adicionar
         </button>
