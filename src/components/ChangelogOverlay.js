@@ -44,6 +44,7 @@ const ChangelogOverlay = ({ onClose }) => {
           <li>17/02 - Agora teremos restrição de IP para sua segurança, se perceber<br/> que o arquivo não esta sendo higienizado entre em contato com o seu <b>Gerente Expande</b> ou com <b>Planejamento.</b> <br/></li>
           <li>18/02 - Agora temos uma nova notificação, caso seu IP esteja bloqueado você será avisado! Não se preocupe, mande seu IP Externo para o seu <b>Gerente Expande</b> e/ou <b>Planejamento</b> para que seja liberado</li>
           <li style={{ color: 'red', fontWeight: 'bold' }}>19/02 - Devido a uma instabilidade o sistema de in100 está fora!</li>
+          <li>20/02 - Ajustes estão sendo realizados no sitema, entraremos em contato para mais atualizações em breve</li>
         </ul>
         <br/>
         {/* <div><b>Obs.:</b> <i>Envie o IP se nenhum nome estiver sendo higienizado !</i></div> */}
