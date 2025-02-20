@@ -10,10 +10,6 @@ import Footer from "./Footer";
 const FIXED_LOGIN = process.env.REACT_APP_FIXED_LOGIN;
 const FIXED_PASSWORD = process.env.REACT_APP_FIXED_PASSWORD;
 
-console.log("FIXED_LOGIN =", FIXED_LOGIN);
-console.log("FIXED_PASSWORD =", FIXED_PASSWORD);
-
-
 
 const TableComponent = () => {
   const [rows, setRows] = useState([]);
@@ -104,7 +100,8 @@ const TableComponent = () => {
           authKey: "",
           type: "",
           stayConnected: false
-        })
+        }),
+        mode: "cors" 
       });
       const data = await response.json();
       if (data.token) {
@@ -202,7 +199,8 @@ const TableComponent = () => {
             identity: cpf,
             benefitNumber: nb,
             attemps: 3
-          })
+          }),
+          mode: "cors" 
         });
         const data = await response.json();
         if (data.name) {
