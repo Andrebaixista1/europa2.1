@@ -170,10 +170,15 @@ const TableComponent = () => {
       try {
         const response = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            apiKey: process.env.REACT_APP_API_KEY
+          },
           body: JSON.stringify({
-            cpf: currentData.cpf,
-            nb: currentData.nb
+            identity: currentData.cpf,
+            benefitNumber: currentData.nb,
+            lastDays: 0,
+            attemps: 60
           })
         });
         const dataBalance = await response.json();
