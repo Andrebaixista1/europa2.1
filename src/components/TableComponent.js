@@ -168,7 +168,7 @@ const TableComponent = () => {
 
       const currentData = currentRow.csvData[currentRow.currentIndex];
       try {
-        const response = await fetch("http://localhost:5000/api/query-inss", {
+        const response = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
