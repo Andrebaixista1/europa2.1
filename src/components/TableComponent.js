@@ -25,7 +25,7 @@ const TableComponent = () => {
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [rows]);
+  }, []);
 
   useEffect(() => {
     fetch("https://api.ipify.org?format=json")
@@ -128,6 +128,32 @@ const TableComponent = () => {
     reader.readAsText(file);
   };
 
+  const fetchBalanceWithRetries = async (cpf, nb) => {
+    for (let i = 0; i < 60; i++) {
+      try {
+        const response = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apiKey: process.env.REACT_APP_API_KEY
+          },
+          body: JSON.stringify({
+            identity: cpf,
+            benefitNumber: nb,
+            lastDays: 0,
+            attempts: 60
+          })
+        });
+        const data = await response.json();
+        if (data.name) {
+          return data;
+        }
+      } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+    return null;
+  };
+
   const processCsvData = async (rowId) => {
     setRows((prev) => {
       const updated = prev.map((row) =>
@@ -168,21 +194,8 @@ const TableComponent = () => {
 
       const currentData = currentRow.csvData[currentRow.currentIndex];
       try {
-        const response = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apiKey: process.env.REACT_APP_API_KEY
-          },
-          body: JSON.stringify({
-            identity: currentData.cpf,
-            benefitNumber: currentData.nb,
-            lastDays: 0,
-            attemps: 60
-          })
-        });
-        const dataBalance = await response.json();
-        if (!dataBalance || !dataBalance.benefitNumber) {
+        const dataBalance = await fetchBalanceWithRetries(currentData.cpf, currentData.nb);
+        if (!dataBalance) {
           setRows((prev) => {
             const updated = prev.map((row) =>
               row.id === rowId
@@ -253,11 +266,17 @@ const TableComponent = () => {
               toast.error(
                 `IP Externo Bloqueado ou Limite de consultas atingido.\nPasse o IP ${clientIP} para o gerente Expande ou diretamente para o planejamento`
               );
-              return;
             } else {
               toast.error("Erro ao inserir dados");
-              return;
             }
+            setRows((prev) => {
+              const updated = prev.map((row) =>
+                row.id === rowId ? { ...row, processing: false, status: "idle" } : row
+              );
+              rowsRef.current = updated;
+              return updated;
+            });
+            return;
           }
 
           setRows((prev) => {
