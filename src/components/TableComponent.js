@@ -6,15 +6,8 @@ import { toast } from "react-toastify";
 import ChangelogOverlay from "./ChangelogOverlay";
 import Footer from "./Footer";
 
-
-const FIXED_LOGIN = process.env.REACT_APP_FIXED_LOGIN;
-const FIXED_PASSWORD = process.env.REACT_APP_FIXED_PASSWORD;
-
-
 const TableComponent = () => {
   const [rows, setRows] = useState([]);
-  const [globalToken, setGlobalToken] = useState("");
-  const [tokenTimestamp, setTokenTimestamp] = useState(0);
   const [clientIP, setClientIP] = useState("");
   const rowsRef = useRef([]);
   const [showOverlay, setShowOverlay] = useState(true);
@@ -89,31 +82,8 @@ const TableComponent = () => {
     }
   };
 
-  const handleAdicionar = async () => {
-    try {
-      const response = await fetch("https://api.ajin.io/v3/auth/sign-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accessId: FIXED_LOGIN,
-          password: FIXED_PASSWORD,
-          authKey: "",
-          type: "",
-          stayConnected: false
-        }),
-        mode: "cors" 
-      });
-      const data = await response.json();
-      if (data.token) {
-        setGlobalToken(data.token);
-        setTokenTimestamp(Date.now());
-        addRow();
-      } else {
-        toast.error("Erro ao gerar token da API");
-      }
-    } catch {
-      toast.error("Erro ao gerar token da API");
-    }
+  const handleAdicionar = () => {
+    addRow();
   };
 
   const handleFileUpload = (event, id) => {
@@ -158,60 +128,6 @@ const TableComponent = () => {
     reader.readAsText(file);
   };
 
-  const getToken = async () => {
-    const TEN_HOURS = 10 * 3600000;
-    const now = Date.now();
-    if (globalToken && tokenTimestamp && now - tokenTimestamp < TEN_HOURS) {
-      return globalToken;
-    }
-    try {
-      const response = await fetch("https://api.ajin.io/v3/auth/sign-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accessId: FIXED_LOGIN,
-          password: FIXED_PASSWORD,
-          authKey: "",
-          type: "",
-          stayConnected: false
-        })
-      });
-      const data = await response.json();
-      setGlobalToken(data.token);
-      setTokenTimestamp(Date.now());
-      return data.token;
-    } catch {
-      toast.error("Erro ao gerar token da API");
-      return "";
-    }
-  };
-
-  const fetchBalanceWithRetries = async (cpf, nb, token) => {
-    for (let i = 0; i < 3; i++) {
-      try {
-        const response = await fetch("https://api.ajin.io/v3/query-inss-balances/finder/await", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            identity: cpf,
-            benefitNumber: nb,
-            attemps: 3
-          }),
-          mode: "cors" 
-        });
-        const data = await response.json();
-        if (data.name) {
-          return data;
-        }
-      } catch {}
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-    }
-    return null;
-  };
-
   const processCsvData = async (rowId) => {
     setRows((prev) => {
       const updated = prev.map((row) =>
@@ -220,7 +136,6 @@ const TableComponent = () => {
       rowsRef.current = updated;
       return updated;
     });
-    const token = await getToken();
 
     const processLine = async () => {
       setRows((prev) => {
@@ -253,12 +168,24 @@ const TableComponent = () => {
 
       const currentData = currentRow.csvData[currentRow.currentIndex];
       try {
-        const dataBalance = await fetchBalanceWithRetries(currentData.cpf, currentData.nb, token);
-        if (!dataBalance) {
+        const response = await fetch("http://localhost:5000/api/query-inss", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cpf: currentData.cpf,
+            nb: currentData.nb
+          })
+        });
+        const dataBalance = await response.json();
+        if (!dataBalance || !dataBalance.benefitNumber) {
           setRows((prev) => {
             const updated = prev.map((row) =>
               row.id === rowId
-                ? { ...row, semRespostaAPI: row.semRespostaAPI + 1, currentIndex: row.currentIndex + 1 }
+                ? {
+                    ...row,
+                    semRespostaAPI: row.semRespostaAPI + 1,
+                    currentIndex: row.currentIndex + 1
+                  }
                 : row
             );
             rowsRef.current = updated;
@@ -348,7 +275,11 @@ const TableComponent = () => {
         setRows((prev) => {
           const updated = prev.map((row) =>
             row.id === rowId
-              ? { ...row, semRespostaAPI: row.semRespostaAPI + 1, currentIndex: row.currentIndex + 1 }
+              ? {
+                  ...row,
+                  semRespostaAPI: row.semRespostaAPI + 1,
+                  currentIndex: row.currentIndex + 1
+                }
               : row
           );
           rowsRef.current = updated;
@@ -357,7 +288,11 @@ const TableComponent = () => {
       }
 
       const updatedRow = rowsRef.current.find((r) => r.id === rowId);
-      if (updatedRow && updatedRow.status === "carregando" && updatedRow.currentIndex < updatedRow.total) {
+      if (
+        updatedRow &&
+        updatedRow.status === "carregando" &&
+        updatedRow.currentIndex < updatedRow.total
+      ) {
         setTimeout(() => {
           processLine();
         }, 5000);
