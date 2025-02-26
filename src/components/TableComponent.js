@@ -442,7 +442,7 @@ const TableComponent = () => {
         </button>
         <div className="ms-auto">
           <strong>Limite Mensal: </strong>
-          {limiteMensal !== null ? limiteMensal : "Carregando..."}
+          {limiteMensal !== null ? limiteMensal.toLocaleString("pt-BR") : "Carregando..."}
         </div>
       </div>
 
