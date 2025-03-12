@@ -10,9 +10,9 @@ app.use(express.json());
 const pool = mysql.createPool({
   host: '45.179.91.180',
   port: 3306,
-  user: 'andrefelipe',
+  user: 'planejamento',
   password: '899605aA@',
-  database: 'vieira_online'
+  database: 'inbis'
 });
 
 // Inserção com atualização se já existir o mesmo CPF e NB (supondo índice único em numero_documento e numero_beneficio)

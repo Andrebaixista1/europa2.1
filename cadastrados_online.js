@@ -11,9 +11,9 @@ const logging = {
 // Configuração do MySQL
 const dbConfig = {
     host: '45.179.91.180',
-    user: 'andrefelipe',
+    user: 'planejamento',
     password: '899605aA@',
-    database: 'vieira_online',
+    database: 'inbis',
     port: 3306
 };
 
