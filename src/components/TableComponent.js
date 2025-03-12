@@ -135,7 +135,7 @@ const TableComponent = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            apiKey: process.env.REACT_APP_API_KEY
+            apiKey: "SdRa+8+4JT5wPuMVRA4dyixG7C/p6okJrMQpgItUJIXYInjs2ikTlRmQGHD41ICt"
           },
           body: JSON.stringify({
             identity: cpf,
