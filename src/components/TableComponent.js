@@ -36,7 +36,7 @@ const TableComponent = () => {
 
   const fetchLimiteMensal = async () => {
     try {
-      const response = await fetch("https://api-in100v2.vercel.app/api/limit");
+      const response = await fetch("https://api-js-in100.vercel.app/api/limit");
       const result = await response.json();
       if (result.success) {
         setLimiteMensal(result.limite);
@@ -135,7 +135,7 @@ const TableComponent = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            apiKey: "SdRa+8+4JT5wPuMVRA4dyixG7C/p6okJrMQpgItUJIXYInjs2ikTlRmQGHD41ICt"
+            apiKey: process.env.REACT_APP_API_KEY
           },
           body: JSON.stringify({
             identity: cpf,
@@ -255,7 +255,7 @@ const TableComponent = () => {
             nome_arquivo: currentRow.lote
           };
 
-          const responseInsert = await fetch("https://api-in100v2.vercel.app/api/insert", {
+          const responseInsert = await fetch("https://api-js-in100.vercel.app/api/insert", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(processedData)
@@ -363,7 +363,7 @@ const TableComponent = () => {
     if (window.confirm("Tem certeza que deseja excluir este arquivo? Esta ação não pode ser desfeita.")) {
       const row = rows.find((r) => r.id === id);
       if (!row) return;
-      await fetch(`https://api-in100v2.vercel.app/api/delete?nome_arquivo=${row.lote}`, {
+      await fetch(`https://api-js-in100.vercel.app/api/delete?nome_arquivo=${row.lote}`, {
         method: "DELETE"
       });
       setRows((prev) => {
@@ -379,7 +379,7 @@ const TableComponent = () => {
   const handleDownload = async (id) => {
     const row = rows.find((r) => r.id === id);
     if (!row || row.lote === "Sem arquivo") return;
-    const response = await fetch(`https://api-in100v2.vercel.app/api/download?nome_arquivo=${row.lote}`);
+    const response = await fetch(`https://api-js-in100.vercel.app/api/download?nome_arquivo=${row.lote}`);
     const result = await response.json();
     if (result.success && result.data && result.data.length > 0) {
       const excludeKeys = ["id", "ip_origem", "data_hora_registro", "nome_arquivo"];
