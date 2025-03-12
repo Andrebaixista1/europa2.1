@@ -359,22 +359,22 @@ const TableComponent = () => {
     processCsvData(id);
   };
 
-  const handleDeleteRow = async (id) => {
-    if (window.confirm("Tem certeza que deseja excluir este arquivo? Esta ação não pode ser desfeita.")) {
-      const row = rows.find((r) => r.id === id);
-      if (!row) return;
-      await fetch(`https://api-in100v2.vercel.app/api/delete?nome_arquivo=${row.lote}`, {
-        method: "DELETE"
-      });
+  const handleDeleteRow = (id) => {
+    if (
+      window.confirm(
+        "Tem certeza que deseja excluir este arquivo? Esta ação não pode ser desfeita."
+      )
+    ) {
       setRows((prev) => {
         const updated = prev.filter((row) => row.id !== id);
         rowsRef.current = updated;
         return updated;
       });
-      toast.success("Arquivo excluído com sucesso do banco de dados!");
+      toast.success("Arquivo removido da interface!");
       fetchLimiteMensal();
     }
   };
+  
 
   const handleDownload = async (id) => {
     const row = rows.find((r) => r.id === id);
